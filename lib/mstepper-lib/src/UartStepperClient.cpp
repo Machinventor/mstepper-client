@@ -62,6 +62,13 @@ int UartStepperClient::move(long pos, long speed, int opts)
     return extractResponseCode(m_buffer);
 }
 
+int UartStepperClient::moveInfinitely(int dir , long speed)
+{
+    long num = 2000000000L;
+
+    move(num , speed);
+}
+
 int UartStepperClient::jog(long magnitude, long speed, int opts)
 {
 
