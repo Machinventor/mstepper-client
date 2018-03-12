@@ -1,0 +1,24 @@
+#######################################
+# Syntax Coloring Map For LED13
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+SimpleSerial	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+setCommandStart	KEYWORD2
+setCommandEnd	KEYWORD2
+setTimeout	KEYWORD2
+readIntArg	KEYWORD2
+readStrArg	KEYWORD2
+check		KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
