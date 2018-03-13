@@ -7,7 +7,11 @@ char UartStepperClient::m_buffer[50];
 int UartStepperClient::m_idx = 0;
 
 UartStepperClient::UartStepperClient(Stream *serial)
-    : m_serial(serial)
+    : 
+    m_serial(serial) ,
+    m_microstepping(0) ,
+    m_i2cAddr(0) ,
+    m_acceleration(0)
 {
 }
 
@@ -15,8 +19,15 @@ bool UartStepperClient::connect(long timeout)
 {
     unsigned long current = millis();
 
-    if(internalConnect())
+    if(internalConnect()){
+
+        while(!retrieveSettings()){ 
+            if(timeout >= 0 && millis() - current < timeout){
+                return false;
+            }
+        }
         return true;
+    }
 
     char* cmd = generateResetCmd(OPTS_HARD);
     bool connected = false;
@@ -38,6 +49,13 @@ bool UartStepperClient::connect(long timeout)
 
     //Clear memory
     free(cmd);
+
+    while(!retrieveSettings()){ 
+        if(timeout >= 0 && millis() - current < timeout){
+            connected = false;
+            break;
+        }
+    }
 
     return connected;
 }
@@ -74,7 +92,7 @@ int UartStepperClient::jog(long magnitude, long speed, int opts)
 
     writeAndClear(generateJogCmd(magnitude, speed, opts));
 
-    int timeout = 10;
+    long timeout = DEFAULT_READ_LINE_TIMEOUT;
 
     if (opts & OPTS_SYNC)
     {
@@ -83,6 +101,16 @@ int UartStepperClient::jog(long magnitude, long speed, int opts)
 
     if (!readLine(timeout))
     {
+        return RES_ERR_TIMEDOUT;
+    }
+
+    return extractResponseCode(m_buffer);
+}
+
+int UartStepperClient::moveReference(){
+    writeAndClear(generateMoveReferenceCmd());
+
+    if(!readLine(-1)){
         return RES_ERR_TIMEDOUT;
     }
 
@@ -114,6 +142,11 @@ int UartStepperClient::setAccel(long accel)
     if(accel < 0)
         return ERR_VALUE_SHOULD_BE_POSITIVE;
 
+    //If accel is same
+    if(accel == m_acceleration){
+        return RES_SUCCESS;
+    }
+
     writeAndClear(generateSetAccelCmd(accel));
 
     //If readline timedout
@@ -121,7 +154,14 @@ int UartStepperClient::setAccel(long accel)
         return RES_ERR_TIMEDOUT;
     }
 
-    return extractResponseCode(m_buffer);
+    int code = extractResponseCode(m_buffer);
+
+    //Update settings
+    if(code == RES_SUCCESS){
+        retrieveSettings();
+    }
+
+    return code;
 }
 
 int UartStepperClient::setPos(long pos)
@@ -144,6 +184,11 @@ int UartStepperClient::setMicrostepping(int microstep)
     else if(microstep > 4)
         return ERR_MICROSTEP_OUTBOUNDARY;
 
+    //If microstepping is same
+    if(microstep == m_microstepping){
+        return RES_SUCCESS;
+    }
+
     writeAndClear(generateSetMicrostepCmd(microstep));
 
     //Read result
@@ -151,7 +196,14 @@ int UartStepperClient::setMicrostepping(int microstep)
         return RES_ERR_TIMEDOUT;
     }
 
-    return extractResponseCode(m_buffer);
+    int code = extractResponseCode(m_buffer);
+    
+    //Update settings
+    if(code == RES_SUCCESS){
+        retrieveSettings();
+    }
+
+    return code;
 }
 
 int UartStepperClient::setI2cAddress(int addr)
@@ -159,7 +211,11 @@ int UartStepperClient::setI2cAddress(int addr)
     //Check validity
     if(addr < 0 || addr > 255)
         return ERR_INVALID_I2C_ADDR;
-    
+
+    //If microstepping is same
+    if(addr == m_i2cAddr){
+        return RES_SUCCESS;
+    }
 
     writeAndClear(generateSetI2CAddress(addr));
 
@@ -168,7 +224,13 @@ int UartStepperClient::setI2cAddress(int addr)
         return RES_ERR_TIMEDOUT;
     }
 
-    return extractResponseCode(m_buffer);
+    int code = extractResponseCode(m_buffer);
+    
+    //Update settings
+    if(code == RES_SUCCESS){
+        retrieveSettings();
+    }
+    return code;
 }
 
 bool UartStepperClient::isRunning()
@@ -337,4 +399,40 @@ int UartStepperClient::hardReset(){
     writeAndClear(generateResetCmd(OPTS_HARD));
 
     return connect();
+}
+
+bool UartStepperClient::retrieveSettings(){
+    writeAndClear(generateRetrieveSettingsCmd());
+
+    if(!readLine(DEFAULT_READ_LINE_TIMEOUT)){
+        return false;
+    }
+
+    bool accelReceived , i2cReceived , microstepReceived;
+    accelReceived = i2cReceived = microstepReceived = false;
+
+    do {
+        char *dup, *dup_orig;
+        dup = dup_orig = strdup(m_buffer);
+        if(strncmp_P(dup , PSTR("accel") , 5) == 0){
+            char accelStr[12];
+            memcpy(accelStr, &dup[6], strlen(dup) - 5);
+            m_acceleration = atol(accelStr);
+            accelReceived = true;
+        } else if(strncmp_P(m_buffer , PSTR("i2cAddr") , 7) == 0) {
+            char i2cAddrStr[8];
+            memcpy(i2cAddrStr , &dup[8] , strlen(dup) - 7);
+            m_i2cAddr = atoi(i2cAddrStr);
+            i2cReceived = true;
+        } else if(strncmp_P(m_buffer , PSTR("microstepping") , 13) == 0) {
+            char microsteppingStr[8];
+            memcpy(microsteppingStr , &dup[14] , strlen(dup) - 13);
+            m_microstepping = atoi(microsteppingStr);
+            microstepReceived = true;
+        }
+
+        free(dup_orig);
+    } while(readLine(DEFAULT_READ_LINE_TIMEOUT) != RES_ERR_TIMEDOUT);
+
+    return accelReceived && i2cReceived && microstepReceived;
 }

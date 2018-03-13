@@ -149,6 +149,15 @@ char* MStepperClient::generateResetCmd(int opts){
     return buffer;
 }
 
+char* MStepperClient::generateMoveReferenceCmd(){
+    char* buffer = generateBuffer();
+
+    strcat_P(buffer , PSTR("reference"));
+    terminate(buffer);
+
+    return buffer;
+}
+
 char *MStepperClient::generateBuffer()
 {
     char* c = (char *)malloc(sizeof(char) * 50);

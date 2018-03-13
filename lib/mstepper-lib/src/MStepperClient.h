@@ -12,6 +12,8 @@
 #define ERR_VALUE_NOT_SPECIFIED 6
 #define ERR_MICROSTEP_OUTBOUNDARY 7
 #define ERR_INVALID_I2C_ADDR 8
+#define ERR_REFERENCE_PULL_OFF 9
+#define ERR_INVALID_VALUE 10
 
 #define OPTS_SYNC   (1 << 0)
 #define OPTS_SOFT   (1 << 1)
@@ -30,6 +32,7 @@ class MStepperClient
     virtual int     setMicrostepping(int microstep) = 0;
     virtual int     setI2cAddress(int addr) = 0;
     virtual int     hardReset() = 0;
+    virtual int     moveReference() = 0;
     virtual long    position() = 0;
     virtual bool    isRunning() = 0;
     virtual bool    connect(long timeout) = 0;
@@ -39,6 +42,7 @@ class MStepperClient
     static char *generateMoveCmd(long pos, long speed, int opts = 0);
     static char *generateJogCmd(long magnitude, long speed, int opts = 0);
     static char *generateStopCmd(int opts = 0);
+    static char *generateMoveReferenceCmd();
     static char *generateGetPosCmd();
     static char *generateSetAccelCmd(long accel);
     static char *generateSetPosCmd(long pos);

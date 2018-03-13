@@ -46,7 +46,6 @@ int I2CStepperClient::jog(long magnitude , long speed , int opts)
     }
 
     //Remove sync options
-    //It will be handled with hacky way
     opts &= ~(OPTS_SYNC);
 
     writeAndClear(generateJogCmd(magnitude , speed , opts));
@@ -65,11 +64,17 @@ int I2CStepperClient::stop(int opts)
 
     bool sync = false;
 
+    //If sync option is specified
     if(opts & OPTS_SYNC)
         sync = true;
 
+    //Remove sync options
+    opts &= ~OPTS_SYNC;
+
     writeAndClear(generateStopCmd(opts));
 
+    //If sync is specified
+    //Wait for motion end
     if(sync){
         waitForMotionEnd();
     }
@@ -131,9 +136,10 @@ void I2CStepperClient::writeAndClear(char* str)
 void I2CStepperClient::write(char* str){
     Wire.beginTransmission(m_i2cAddr);
     int len = strlen(str);
-
+    Serial.print("::write =>");
     for(int i = 0; i < len; i++){
         Wire.write(str[i]);
+        Serial.write(str[i]);
     }
 
     Wire.endTransmission();
@@ -143,7 +149,7 @@ bool I2CStepperClient::waitForMotionEnd(long timeout){
     long start = millis();
     do{
         update();
-
+        delay(1);
         //Check for timeout
         if(timeout >= 0 && millis() - start < timeout)
             return false;
@@ -168,8 +174,5 @@ void I2CStepperClient::update(){
     data.b[3] = Wire.read();
     m_running = c > 0;
     m_position = data.num;
-    Serial.println("Updated");
-  } else {
-      Serial.println("No data available");
   }
 }
