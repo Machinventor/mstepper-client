@@ -17,6 +17,8 @@ class I2CStepperClient : public MStepperClient
         virtual int     setMicrostepping(int microstep);
         virtual int     setI2cAddress(int addr);
         virtual int     hardReset();
+        virtual int     moveReference();
+        virtual int     setSpeed(long speed);
         virtual long    position();
         virtual bool    isRunning();
         virtual bool    connect(long timeout = -1);

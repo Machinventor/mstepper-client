@@ -33,6 +33,7 @@ class MStepperClient
     virtual int     setI2cAddress(int addr) = 0;
     virtual int     hardReset() = 0;
     virtual int     moveReference() = 0;
+    virtual int     setSpeed(long speed) = 0;
     virtual long    position() = 0;
     virtual bool    isRunning() = 0;
     virtual bool    connect(long timeout) = 0;
@@ -53,6 +54,7 @@ class MStepperClient
     static char *generateResetCmd(int opts = 0);
     static char *generateCheckCmd();
     static char *generateBuffer();
+    static char *generateSetSpeedCmd(long speed);
     static void  appendOptions(char* buffer , int opts);
     static void  whitespace(char* str);
     static void  terminate(char* str);

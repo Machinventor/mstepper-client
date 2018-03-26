@@ -158,6 +158,18 @@ char* MStepperClient::generateMoveReferenceCmd(){
     return buffer;
 }
 
+char* MStepperClient::generateSetSpeedCmd(long speed){
+    //Generate buffer
+    char* buffer = generateBuffer();
+    char  speedBuffer[12];
+
+    sprintf_P(speedBuffer , PSTR("%ld") , speed);
+    strcat_P(buffer , PSTR("override --speed "));
+    strcat(buffer , speedBuffer);
+    terminate(buffer);
+    return buffer;
+}
+
 char *MStepperClient::generateBuffer()
 {
     char* c = (char *)malloc(sizeof(char) * 50);

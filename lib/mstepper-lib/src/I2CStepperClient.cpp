@@ -4,7 +4,7 @@
 I2CStepperClient::I2CStepperClient(int i2cAddr) 
 : 
     m_i2cAddr(i2cAddr) ,
-    m_running(false) ,
+    m_running(true) ,
     m_position(0)
 {   }
 
@@ -22,7 +22,9 @@ int I2CStepperClient::move(long pos , long speed , int opts)
 
     writeAndClear(generateMoveCmd(pos , speed , opts));
 
+    //If sync options is specified
     if(sync){
+        //Waiting for motion end
         waitForMotionEnd();
     }
 
@@ -111,6 +113,12 @@ int I2CStepperClient::hardReset(){
     return RES_SUCCESS;
 }
 
+int I2CStepperClient::setSpeed(long speed){
+    //Generate and write command to step-1 card
+    writeAndClear(generateSetSpeedCmd(speed));
+    return RES_SUCCESS;
+}
+
 long I2CStepperClient::position(){
     return m_position;
 }
@@ -147,7 +155,7 @@ void I2CStepperClient::write(char* str){
 
 bool I2CStepperClient::waitForMotionEnd(long timeout){
     long start = millis();
-    do{
+    do {
         update();
         delay(1);
         //Check for timeout
@@ -175,4 +183,8 @@ void I2CStepperClient::update(){
     m_running = c > 0;
     m_position = data.num;
   }
+}
+
+int I2CStepperClient::moveReference(){
+    return ERR_REFERENCE_PULL_OFF;
 }
